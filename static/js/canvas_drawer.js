@@ -10,10 +10,11 @@ function setupCanvas(canvasId) {
     $('#drawableCanvas').show();
     let elem = document.getElementById(canvasId);
     let root = document.getElementById('player');
-    // console.log(root.offsetLeft, root.clientLeft)
-    // console.log(root.offsetTop, root.clientTop)
-    let elemLeft = root.offsetLeft + 16 + elem.offsetLeft + elem.clientLeft;
-    let elemTop = root.offsetTop+ 16 + elem.offsetTop + elem.clientTop;
+    let col = document.querySelector('.col-md-8');
+    console.log(col.offsetLeft, col.clientLeft)
+    console.log(col.offsetTop, col.clientTop)
+    let elemLeft = col.offsetLeft + root.offsetLeft + 16 + elem.offsetLeft + elem.clientLeft;
+    let elemTop = col.offsetTop + root.offsetTop+ 16 + elem.offsetTop + elem.clientTop;
     let context = elem.getContext('2d');
     let pointRadius = 8;
     let pointColor = '#3542fc';

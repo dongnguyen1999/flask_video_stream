@@ -111,6 +111,5 @@ def index():
 #     """Video streaming route. Put this in the src attribute of an img tag."""
 #     return Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 if __name__ == '__main__':
+if __name__ == '__main__':
     socketio.run(app)
