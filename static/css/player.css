@@ -20,7 +20,7 @@ h1 {
 
 #videoElement {
     width: 100%;
-    height: 480px;
+    height: 80vh;
     display: block;
     background-color: #666;
 }
@@ -31,7 +31,7 @@ h1 {
     width: calc(100% - 2em);
     object-fit: contain;
     background: #666;
-    height: 480px;
+    height: 80vh;
 }
 
 #drawableContainer {
@@ -39,7 +39,7 @@ h1 {
     top: 1em;
     width: calc(100% - 2em);
     /*width: 500px;*/
-    height: 480px;
+    height: 80vh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -50,7 +50,7 @@ h1 {
     float: left;
     padding: 1em 1em .5em;
     background-color: black;
-    border: 2px solid darkgreen;
+    border: 2px solid white;
     border-radius: 9px;
     width: 100%;
     position: relative;
@@ -61,7 +61,7 @@ h1 {
 
 
 #controls {
-    border: 1px solid darkgreen;
+    border: 1px solid white;
     width: 100%;
     /*margin-left: auto;*/
     /*margin-right: auto;*/
@@ -72,7 +72,7 @@ h1 {
 }
 
 video {
-    border: 1px solid darkgreen;
+    border: 1px solid white;
     width: 420px;
     height: 231px;
     background: black;
@@ -278,4 +278,9 @@ input[type=range]:focus::-ms-fill-upper {
 
 }
 
+.custom-handle {
+    width: 2em !important;
+    height: 1.4em !important;
+    text-align: center;
+}
 

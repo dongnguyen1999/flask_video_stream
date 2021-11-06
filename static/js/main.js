@@ -1,4 +1,5 @@
 var interval = null;
+var change_video = false;
 
 $(document).ready(function () {
     let namespace = "/test";
@@ -29,13 +30,67 @@ $(document).ready(function () {
         //     startTime = endTime;
         //     console.log(processTime)
         // }
-        let serverFps = data.server_fps;
+        let result = JSON.parse(data.result);
+
+        let serverFps = parseFloat(result.fps);
+        let clsFps = parseFloat(result.cls_fps).toFixed(1);
+        let dtFps = result.dt_fps !== undefined? parseFloat(result.dt_fps).toFixed(1): undefined;
+        let bsFps = result.bs_fps !== undefined? parseFloat(result.bs_fps).toFixed(1): undefined;
+
+        let totalCount = parseInt(result.total_count);
+
+        let countScore = result.count_score !== undefined? parseFloat(result.count_score).toFixed(2): undefined;
+        let diffRate = result.diff_rate !== undefined? parseFloat(result.diff_rate).toFixed(2): undefined;
+        let labelName = result.label_name;
+
         photo.setAttribute('src', data.image_data);
+
+        $('#fps-info span').text(serverFps.toFixed(1));
+        $('#cls-fps-info span').text(clsFps);
+        if (dtFps) {
+            $('#bs-fps-info').hide();
+            $('#count-fps-info span').text(dtFps);
+            $('#count-fps-info').show();
+        }
+
+        if (bsFps) {
+            $('#count-fps-info').hide();
+            $('#bs-fps-info span').text(bsFps);
+            $('#bs-fps-info').show();
+        }
+
+        if (dtFps) {
+            $('#counting-result .total span').text(totalCount);
+            let count = JSON.parse(result.count);
+            let countColors = JSON.parse(result.count_label_colors.replaceAll("'", '"'));
+            const labelMap = ['2-wheel', '4-wheel', 'priority']
+            for (let i = 0; i < 3; i++) {
+                let counti = parseInt(count[i]);
+                let color = countColors[i];
+                $(`#counting-result .${labelMap[i]} span`).text(counti).css('color', color);
+            }
+            $('#counting-result').show();
+        } else $('#counting-result').hide();
+
+        if (countScore) {
+            $('#predict-result .moving-rate').hide();
+            $('#predict-result .count-score span').text(countScore);
+            $('#predict-result .count-score').show();
+        }
+
+        if (diffRate) {
+            $('#predict-result .count-score').hide();
+            $('#predict-result .moving-rate span').text(diffRate);
+            $('#predict-result .moving-rate').show();
+        }
+
+        $('#predict-result .label span').text(labelName);
+
         if (interval) {
             clearInterval(interval);
             interval = setInterval(() => {
                 sendSnapshot();
-            }, (1000/serverFps));
+            }, (1000/serverFps + 200));
             // console.log('create new interval', interval);
         }
         // if (interval) sendSnapshot();
@@ -51,7 +106,36 @@ $(document).ready(function () {
 
         let dataURL = canvas.toDataURL('image/jpeg');
 
-        socket.emit('input', dataURL, mask, aspectRatio);
+           // 'count_conf_threshold': model.count_conf_threshold,
+           // 'classify_conf_threshold': model.classify_conf_threshold,
+           // 'count_thresholds': model.count_thresholds,
+           // 'crowd_thresholds': model.crowd_thresholds,
+
+        let count_conf_threshold = $('#slider-count').slider('value');
+        let classify_conf_threshold = $('#slider-classification').slider('value');
+        let count_thresholds = $('#slider-range-count').slider('values');
+        let crowd_thresholds = $('#slider-range-crowd').slider('values');
+
+        let show_bounding_box = $('#toggle-show-box').is(":checked");
+        let show_diff_mask = $('#toggle-show-diff').is(":checked");
+        let show_foreground_mask = $('#toggle-show-foreground').is(":checked");
+
+
+        let config = {
+            count_conf_threshold: count_conf_threshold,
+            classify_conf_threshold: classify_conf_threshold,
+            count_thresholds: count_thresholds,
+            crowd_thresholds: crowd_thresholds,
+            show_bounding_box: show_bounding_box,
+            show_diff_mask: show_diff_mask,
+            show_foreground_mask: show_foreground_mask,
+            aspect_ratio: aspectRatio,
+            reset_session: change_video,
+        }
+
+        console.log(change_video)
+        socket.emit('input', dataURL, mask, JSON.stringify(config));
+        if (change_video) change_video = false;
 
         // socket.emit('output image')
 
@@ -81,6 +165,7 @@ $(document).ready(function () {
     // }
 
     let playSelectedFile = function (event) {
+
         let file = this.files[0]
         console.log(file);
         let type = file.type
@@ -104,6 +189,7 @@ $(document).ready(function () {
         elements = [];
 
         videoNode.onseeking = function() {
+            change_video = true;
             if (interval) {
                 clearInterval(interval);
                 interval = setInterval(() => {

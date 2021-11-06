@@ -18,5 +18,11 @@ Pillow==8.3.2
 python-engineio==1.7.0
 python-socketio==1.7.7
 redis==2.10.5
-six==1.10.0
+six
 Werkzeug==0.12.2
+
+tensorflow-gpu==2.6.0
+keras==2.6.0
+
+matplotlib~=3.3.4
+imageio~=2.10.1

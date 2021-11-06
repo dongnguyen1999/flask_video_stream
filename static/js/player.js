@@ -103,8 +103,7 @@ const secondsToHms = (seconds) => {
 // Update the progress bar
 function updateProgressBar() {
     // Work out how much of the media has played via the duration and currentTime parameters
-    var percentage = Math.floor((100 / player.duration) * player.currentTime);
-
+    var percentage = !isNaN(player.duration) ?Math.floor((100 / player.duration) * player.currentTime): 0;
 
     // Update the progress bar's value
     progressBar.value = percentage;

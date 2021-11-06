@@ -5,8 +5,9 @@
     <meta content="ugh, hi." name="description">
     <meta content="Makeup Webcam" name="title">
     <title>Monitoring Vehicle</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous">
+     <link rel="stylesheet" href="//code.jquery.com/ui/1.13.0/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
     <link rel="stylesheet" href="../static/css/player.css">
 </head>
 <body>
@@ -15,10 +16,30 @@
 <div class="container-fluid">
     <div class="row">
         <div id="app-tittle" class="col-md-12">
-            Ước lượng mật độ và mức độ <br>di chuyển của phương tiện giao thông
+            Web App
+<!--            Ước lượng mật độ và mức độ <br>di chuyển của phương tiện giao thông-->
         </div>
         <div class="col-md-2 info-panel left">
-            FPS: 50
+            <div class="font-weight-bold text-dark">Performance:</div>
+            <div id="fps-info">FPS: <span>-</span></div>
+            <div id="cls-fps-info">Classification FPS: <span>-</span></div>
+            <div id="count-fps-info">Counting FPS: <span>-</span></div>
+            <div id="bs-fps-info">Moving Estimation FPS: <span>-</span></div>
+            <hr class="my-6"/>
+            <div id="counting-result">
+                <div class="font-weight-bold text-dark">Counting result:</div>
+                <div class="total">Total count: <span>-</span></div>
+                <div class="ml-3 2-wheel">2-wheel: <span>-</span></div>
+                <div class="ml-3 4-wheel">4-wheel: <span>-</span></div>
+                <div class="ml-3 priority">Priority: <span>-</span></div>
+            </div>
+            <hr class="my-6"/>
+            <div id="predict-result">
+                <div class="font-weight-bold text-dark">Prediction:</div>
+                <div class="count-score">Count score: <span>-</span></div>
+                <div class="moving-rate">Moving rate: <span>-</span>%</div>
+                <div class="label">Label: <span>-</span></div>
+            </div>
         </div>
 
         <div class="col-md-8">
@@ -42,9 +63,21 @@
                 </div>
                 <div id="control-panel" style="margin-top: 12px">
                     <input id="video-input" type="file" accept="video/*"/>
-                    <span>
+                    <span class="mr-3">
                         <input id="toggle-mask" type="checkbox">
                         <label for="toggle-mask">Show mask</label>
+                    </span>
+                    <span class="mr-3">
+                        <input id="toggle-show-box" type="checkbox" {% if model_data.config.heatmap_only %}disabled{% else %}checked{% endif %}>
+                        <label for="toggle-show-box">Show boxes</label>
+                    </span>
+                    <span class="mr-3">
+                        <input id="toggle-show-diff" type="checkbox">
+                        <label for="toggle-show-diff">Show difference</label>
+                    </span>
+                    <span class="mr-3">
+                        <input id="toggle-show-foreground" type="checkbox">
+                        <label for="toggle-show-foreground">Show foreground</label>
                     </span>
                     <canvas id="canvasElement" width=512 height=512 style="display: none"></canvas>
                 </div>
@@ -52,20 +85,97 @@
         </div>
 
         <div class="col-md-2 info-panel right">
+            <div class="font-weight-bold text-dark">Classification model:</div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="crowd_model" id="crowd_model" value="crowd_model" {% if model_data.crowd_model == 'crowd_model' %}checked{% endif %}>
+              <label class="form-check-label text-dark" for="crowd_model">
+                VGG16 1
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="crowd_model" id="crowd_model_focalbin" value="crowd_model_focalbin" {% if model_data.crowd_model == 'crowd_model_focalbin' %}checked{% endif %}>
+              <label class="form-check-label text-dark" for="crowd_model_focalbin">
+                VGG16 2
+              </label>
+            </div>
+            <hr class="my-12"/>
+            <div class="font-weight-bold text-dark">Counting model:</div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="count_model" id="detect_model" value="detect_model" {% if model_data.count_model == 'detect_model' %}checked{% endif %}>
+              <label class="form-check-label text-dark" for="detect_model">
+                Hourglass-52 Detect
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="count_model" id="count_model_1stack" value="count_model_1stack" {% if model_data.count_model == 'count_model_1stack' %}checked{% endif %}>
+              <label class="form-check-label text-dark" for="count_model_1stack">
+                Hourglass-52 Count
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="count_model" id="count_model_2stack" value="count_model_2stack" {% if model_data.count_model == 'count_model_2stack' %}checked{% endif %}>
+              <label class="form-check-label text-dark" for="count_model_2stack">
+                Hourglass-104 Count
+              </label>
+            </div>
+            <hr class="my-12"/>
+            <div class="font-weight-bold text-dark">Confidence:</div>
+            <label class="form-check-label text-dark" for="slider-classification">
+                Classification:
+            </label>
+            <div id="slider-classification" class="my-2 mr-3" data-min="0" data-max="1" data-step="0.1" data-init="{{model_data.config.classify_conf_threshold}}">
+                <div class="ui-slider-handle custom-handle"></div>
+            </div>
+
+            <label class="form-check-label text-dark" for="slider-count">
+                Counting:
+            </label>
+            <div id="slider-count" class="my-2 mr-3" data-min="0" data-max="1" data-step="0.1" data-init="{{model_data.config.count_conf_threshold}}">
+                <div class="ui-slider-handle custom-handle"></div>
+            </div>
+
+            <hr class="my-12"/>
+            <div class="font-weight-bold text-dark">Threshold:</div>
+
+            <label class="form-check-label text-dark" for="slider-range-count">
+                Density:
+            </label>
+            <div id="slider-range-count" class="my-2 mr-3" data-min="0" data-max="50" data-step="1" data-init="{{model_data.config.count_thresholds}}">
+                <div class="ui-slider-handle custom-handle left"></div>
+                <div class="ui-slider-handle custom-handle right"></div>
+            </div>
+
+            <label class="form-check-label text-dark" for="slider-range-crowd">
+                Moving rate:
+            </label>
+            <div id="slider-range-crowd" class="my-2 mr-3" data-min="0" data-max="50" data-step="1" data-init="{{model_data.config.crowd_thresholds}}">
+                <div class="ui-slider-handle custom-handle left"></div>
+                <div class="ui-slider-handle custom-handle right"></div>
+            </div>
+
+            <div id="loading-model">
+                <div class="d-flex align-items-center mt-4">
+                    <div class="spinner-border mr-1" style="width: 1.2rem; height: 1.2rem;" role="status">
+                      <span class="sr-only">Loading...</span>
+                    </div> <span> Changing model...</span>
+                </div>
+            </div>
 
         </div>
     </div>
 
 
 </div>
-<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
-        integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+
+<script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.0/jquery-ui.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
 <script src="../static/js/canvas_drawer.js"></script>
 <script src="../static/js/player.js"></script>
+<script src="../static/js/control_panel.js"></script>
 <script src="../static/js/main.js"></script>
 
 <!--        <script src="{{ url_for('static', filename='js/main.js') }}"></script>-->
