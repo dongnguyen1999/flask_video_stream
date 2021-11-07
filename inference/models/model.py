@@ -1,3 +1,4 @@
+import gc
 import os
 import time
 import numpy as np
@@ -12,6 +13,8 @@ from inference.models.cnn import create_model as create_crowd_model
 from inference.models.hourglass import create_model as create_count_model
 import cv2
 import tensorflow as tf
+from inference.utils import AsynTask
+from tensorflow.keras.backend import clear_session
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
@@ -137,8 +140,15 @@ class Model:
         self.make_model(crowd_model_name, count_model_name)
         self.apply_editable_config(default_config)
 
+        self.reset_session()
+
     def make_model(self, crowd_model_name, count_model_name):
         global model_configs
+
+        self.crowd_model = None
+        self.count_model = None
+
+        gc.collect()
 
         crowd_model_config = model_configs[crowd_model_name]
         count_model_config = model_configs[count_model_name]
@@ -171,6 +181,8 @@ class Model:
         self.count_count = 0
         self.bs_count = 0
 
+        self.process_cache = []
+
     '''
         Editable config:
         default_config = {
@@ -202,100 +214,117 @@ class Model:
     def average_bs_time(self):
         return self.bs_time / self.bs_count
 
+    @AsynTask
+    def classify(self, image):
+
+        pre_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        pre_image = pre_image / 255
+
+        cls_time = time.time()
+
+        if self.crowd_model is None:
+            return
+        pred = self.crowd_model.predict(pre_image[None])
+
+        classify_time = (time.time() - cls_time) * 1000
+        self.current_classify_time = classify_time
+        self.classify_time += classify_time
+
+        self.process_cache.append({
+            'image': image,
+            'cls_score': pred[0]
+        })
+
     def predict(self, image, mask=None, config=default_config):
+        start_time = time.time()
 
         self.apply_editable_config(config)
 
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-        self.current_classify_time = 0
-        self.current_count_time = 0
-        self.current_pred_time = 0
-        self.current_bs_time = 0
-
         image = cv2.resize(image, (512, 512))
-        start_time = time.time()
 
-        pre_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        pre_image = pre_image / 255
-        predY = self.crowd_model.predict(pre_image[None])
+        handle = self.classify(image)
 
-        classify_time = (time.time() - start_time) * 1000
-        self.current_classify_time = classify_time
-        self.classify_time += classify_time
+        if len(self.process_cache) > 0:
+            cls_output = self.process_cache.pop(0)
+            image = cls_output['image']
+            score = cls_output['cls_score']
 
-        score = predY[0]
-        if score >= self.classify_conf_threshold:
+            if score >= self.classify_conf_threshold:
 
-            # 1 - crowd street
-            bs_start_time = time.time()
-            estimation = self.frame_diff_estimator.apply(image, mask=mask, return_diff_mask=config['show_diff_mask'], return_foreground_mask=config['show_foreground_mask'])
-
-            bs_time = (time.time() - bs_start_time) * 1000
-            self.current_bs_time = bs_time
-            self.bs_time += bs_time
-            self.bs_count += 1
-
-            first_pivot, second_pivot = self.crowd_thresholds
-            diff_rate = estimation['diff_rate']
-
-            if diff_rate < first_pivot:
-                estimation['label'] = 5
-            if first_pivot <= diff_rate < second_pivot:
-                estimation['label'] = 4
-            if diff_rate >= second_pivot:
-                estimation['label'] = 3
-
-        else:
-            # 0 - normal street
-            estimation = {}
-            if config['show_diff_mask'] or config['show_foreground_mask'] or self.debug:
+                # 1 - crowd street
+                bs_start_time = time.time()
                 estimation = self.frame_diff_estimator.apply(image, mask=mask, return_diff_mask=config['show_diff_mask'], return_foreground_mask=config['show_foreground_mask'])
+
+                bs_time = (time.time() - bs_start_time) * 1000
+                self.current_bs_time = bs_time
+                self.bs_time += bs_time
+                self.bs_count += 1
+
+                first_pivot, second_pivot = self.crowd_thresholds
+                diff_rate = estimation['diff_rate']
+
+                if diff_rate < first_pivot:
+                    estimation['label'] = 5
+                if first_pivot <= diff_rate < second_pivot:
+                    estimation['label'] = 4
+                if diff_rate >= second_pivot:
+                    estimation['label'] = 3
+
             else:
-                self.frame_diff_estimator.feed(image, mask=mask)
+                # 0 - normal street
+                estimation = {}
+                if config['show_diff_mask'] or config['show_foreground_mask'] or self.debug:
+                    estimation = self.frame_diff_estimator.apply(image, mask=mask, return_diff_mask=config['show_diff_mask'], return_foreground_mask=config['show_foreground_mask'])
+                else:
+                    self.frame_diff_estimator.feed(image, mask=mask)
 
-            count_time_start = time.time()
+                count_time_start = time.time()
 
-            pre_image = normalize_image(image)
+                pre_image = normalize_image(image)
 
-            if mask is not None:
-                pre_image = get_masked_img(pre_image, mask)
-                if self.debug:
-                    cv2.putText(pre_image, 'Diff rate: %.3f' % estimation['diff_rate'], (15, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                                (0, 255, 0), 1, cv2.LINE_AA)
-                    cv2.imshow('count_model.pre_image', pre_image)
+                if mask is not None:
+                    pre_image = get_masked_img(pre_image, mask)
+                    if self.debug:
+                        cv2.putText(pre_image, 'Diff rate: %.3f' % estimation['diff_rate'], (15, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                                    (0, 255, 0), 1, cv2.LINE_AA)
+                        cv2.imshow('count_model.pre_image', pre_image)
 
-            out = self.count_model.predict(pre_image[None])
+                out = self.count_model.predict(pre_image[None])
 
-            count_time = (time.time() - count_time_start) * 1000
-            self.current_count_time = count_time
-            self.count_time += count_time
-            self.count_count += 1
+                count_time = (time.time() - count_time_start) * 1000
+                self.current_count_time = count_time
+                self.count_time += count_time
+                self.count_count += 1
 
-            score_idx = 0 if self.heatmap_only == True else 4
-            label_idx = 1 if self.heatmap_only == True else 5
-            detections = out[0]
-            detections = detections[detections[:, score_idx] > self.count_conf_threshold]
-            count = compute_count_score((
-                np.size(detections[detections[:, label_idx] == 0], axis=0),
-                np.size(detections[detections[:, label_idx] == 1], axis=0),
-                np.size(detections[detections[:, label_idx] == 2], axis=0)
-            ))
+                score_idx = 0 if self.heatmap_only == True else 4
+                label_idx = 1 if self.heatmap_only == True else 5
+                detections = out[0]
+                detections = detections[detections[:, score_idx] > self.count_conf_threshold]
+                count = compute_count_score((
+                    np.size(detections[detections[:, label_idx] == 0], axis=0),
+                    np.size(detections[detections[:, label_idx] == 1], axis=0),
+                    np.size(detections[detections[:, label_idx] == 2], axis=0)
+                ))
 
-            estimation['detections'] = detections
+                estimation['detections'] = detections
 
-            first_pivot, second_pivot = self.count_thresholds
-            if count < first_pivot:
-                estimation['label'] = 0
-            if first_pivot <= count < second_pivot:
-                estimation['label'] = 1
-            if count >= second_pivot:
-                estimation['label'] = 2
+                first_pivot, second_pivot = self.count_thresholds
+                if count < first_pivot:
+                    estimation['label'] = 0
+                if first_pivot <= count < second_pivot:
+                    estimation['label'] = 1
+                if count >= second_pivot:
+                    estimation['label'] = 2
 
-        pred_time = (time.time() - start_time) * 1000
-        self.pred_time += pred_time
-        self.current_pred_time = pred_time
+            pred_time = (time.time() - start_time) * 1000
+            self.pred_time += pred_time
+            self.current_pred_time = pred_time
 
-        self.pred_count += 1
+            self.pred_count += 1
 
-        return estimation
+            return image, estimation
+        else:
+            handle.join()
+            return None

@@ -284,3 +284,6 @@ input[type=range]:focus::-ms-fill-upper {
     text-align: center;
 }
 
+.count-label, .pred-label {
+    text-shadow: 1px 1px #000000;
+}

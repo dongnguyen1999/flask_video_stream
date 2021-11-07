@@ -2,6 +2,14 @@ from inference.config import Config
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+import threading
+
+def AsynTask(fn):
+    def wrapper(*args, **kwargs):
+        thread = threading.Thread(target=fn, args=args, kwargs=kwargs)
+        thread.start()
+        return thread
+    return wrapper
 
 
 def normalize_image(image):
@@ -33,13 +41,16 @@ def get_masked_img(img, mask):
 def compute_count_score(counts, weights=[1, 2, 3]):
     return counts[0] * weights[0] + counts[1] * weights[1] + counts[2] * weights[2]
 
+def bgr_to_hex(bgr):
+    colortuple = (bgr[2], bgr[1], bgr[0])
+    return '#' + ''.join(f'{i:02X}' for i in colortuple)
 
 def visualize(img, model_result, cls_time, bs_time, dt_time, pred_time, display=False, config=None):
     boxes = []
     scores = []
 
-    color_scheme = [(0, 255, 255), (255, 0, 0), (0, 0, 255), (0, 127, 127), (127, 255, 127), (255, 255, 0)]
-    end_label_map = ['Low', 'Medium', 'High', 'Normally', 'Slowly', 'Traffic jam']
+    color_scheme = [(255, 0, 0), (0, 255, 255), (0, 0, 255), (0, 127, 127), (127, 255, 127), (255, 255, 0)]
+    end_label_map = ['Low Density', 'Medium Density', 'High Density', 'Moving Normally', 'Moving Slowly', 'Traffic Jam']
 
     cls_fps = 1000 / (cls_time + 1e-6)
     bs_fps = 1000 / (bs_time + 1e-6)
@@ -151,8 +162,8 @@ def visualize(img, model_result, cls_time, bs_time, dt_time, pred_time, display=
             'total_count': str(np.sum(count)),
             'count_score': str(compute_count_score(count)),
             'count': str(count.tolist()),
-            'count_label_colors': str([str(color_scheme[i]) for i in range(len(count))]),
-            'fps': str(fps),
+            'count_label_colors': str([bgr_to_hex(color_scheme[i]) for i in range(len(count))]),
+            'fps': str(min(fps, cls_fps, dt_fps)),
             'cls_fps': str(cls_fps),
             'dt_fps': str(dt_fps)
         }
@@ -178,7 +189,7 @@ def visualize(img, model_result, cls_time, bs_time, dt_time, pred_time, display=
             'label': str(end_label),
             'label_name': end_label_map[end_label],
             'diff_rate': str(diff_rate),
-            'fps': str(fps),
+            'fps': str(min(fps, cls_fps, bs_fps)),
             'cls_fps': str(cls_fps),
             'bs_fps': str(bs_fps)
         }

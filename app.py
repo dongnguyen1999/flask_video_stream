@@ -20,8 +20,6 @@ import time
 import os
 import json
 
-model = Model('crowd_model', 'detect_model')
-
 app = Flask(__name__)
 app.logger.addHandler(logging.StreamHandler(stdout))
 app.config['SECRET_KEY'] = 'secret!'
@@ -40,11 +38,8 @@ def queue_inputs(input, mask, config):
     config_dict = json.loads(config)
 
     reset_session = config_dict['reset_session']
-    aspect_ratio = config_dict['aspect_ratio']
 
     image_data = input
-    # image_data = image_data.decode("utf-8")
-    # print(mask)
 
     img = imread(io.BytesIO(base64.b64decode(image_data)))
 
@@ -54,28 +49,26 @@ def queue_inputs(input, mask, config):
     if reset_session:
         model.reset_session()
 
-    result = model.predict(img, mask=env_mask, config=config_dict)
+    pred_output = model.predict(img, mask=env_mask, config=config_dict)
 
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    img = get_masked_img(img, env_mask)
+    if pred_output is not None:
+        out_img, result = pred_output
+        out_img = get_masked_img(out_img, env_mask)
+        out_img, result = visualize(out_img, result, model.current_classify_time, model.current_bs_time, model.current_count_time, model.current_pred_time, config=config_dict)
 
+        # plt.imshow(img)
+        # plt.show()
 
-    img, result = visualize(img, result, model.current_classify_time, model.current_bs_time, model.current_count_time, model.current_pred_time, config=config_dict)
+        _, buffer = cv2.imencode('.jpg', out_img)
+        b = base64.b64encode(buffer)
+        b = b.decode()
+        image_data = "data:image/jpeg;base64," + b
 
-    # plt.imshow(img)
-    # plt.show()
+        # print(json.dumps(result))
 
-    _, buffer = cv2.imencode('.jpg', img)
-    b = base64.b64encode(buffer)
-    b = b.decode()
-    image_data = "data:image/jpeg;base64," + b
+        # print("OUTPUT " + image_data)
+        emit('output-event', {'image_data': image_data, 'result': json.dumps(result)}, namespace='/test')
 
-    # print(json.dumps(result))
-
-    # print("OUTPUT " + image_data)
-    emit('output-event', {'image_data': image_data, 'result': json.dumps(result)}, namespace='/test')
-
-    # camera.enqueue_input(base64_to_pil_image(input))
 
 
 @socketio.on('connect', namespace='/test')
@@ -137,7 +130,5 @@ def index():
 #     return Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
-
-
-
-    socketio.run(app)
+    model = Model('crowd_model', 'detect_model')
+    socketio.run(app, use_reloader=False)

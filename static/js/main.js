@@ -11,7 +11,7 @@ $(document).ready(function () {
 
     let localMediaStream = null;
 
-    let INIT_FPS = 3;
+    let INIT_FPS = 1;
 
     let aspectRatio = 0;
 
@@ -41,6 +41,7 @@ $(document).ready(function () {
 
         let countScore = result.count_score !== undefined? parseFloat(result.count_score).toFixed(2): undefined;
         let diffRate = result.diff_rate !== undefined? parseFloat(result.diff_rate).toFixed(2): undefined;
+        let label = parseInt(result.label);
         let labelName = result.label_name;
 
         photo.setAttribute('src', data.image_data);
@@ -67,7 +68,9 @@ $(document).ready(function () {
             for (let i = 0; i < 3; i++) {
                 let counti = parseInt(count[i]);
                 let color = countColors[i];
-                $(`#counting-result .${labelMap[i]} span`).text(counti).css('color', color);
+                console.log(color);
+                $(`#counting-result .${labelMap[i]} span`).text(counti)
+                $(`#counting-result .${labelMap[i]}`).css('color', color);
             }
             $('#counting-result').show();
         } else $('#counting-result').hide();
@@ -84,13 +87,20 @@ $(document).ready(function () {
             $('#predict-result .moving-rate').show();
         }
 
-        $('#predict-result .label span').text(labelName);
+        console.log(label);
+        let status = label < 3? 'Not Crowded': 'Crowded';
+        let labelColor = label < 3? '#009b00': '#cb0000';
+        $('#predict-result .status-label span').text(status).css('color', labelColor);
+        $('#predict-result .label span').text(labelName).css('color', labelColor);
 
         if (interval) {
             clearInterval(interval);
-            interval = setInterval(() => {
-                sendSnapshot();
-            }, (1000/serverFps + 200));
+            if (!blockInterval) {
+                interval = setInterval(() => {
+                    sendSnapshot();
+                }, (1000/serverFps + 200));
+            }
+
             // console.log('create new interval', interval);
         }
         // if (interval) sendSnapshot();
@@ -119,6 +129,14 @@ $(document).ready(function () {
         let show_bounding_box = $('#toggle-show-box').is(":checked");
         let show_diff_mask = $('#toggle-show-diff').is(":checked");
         let show_foreground_mask = $('#toggle-show-foreground').is(":checked");
+
+        if (show_diff_mask || show_foreground_mask) {
+            $('#toggle-mask').prop('checked', false); // Unchecks it
+            $('#toggle-mask').prop('disabled', true); // Unchecks it
+            $('#drawableCanvas').hide();
+        } else {
+            $('#toggle-mask').prop('disabled', false); // Unchecks it
+        }
 
 
         let config = {
@@ -166,6 +184,8 @@ $(document).ready(function () {
 
     let playSelectedFile = function (event) {
 
+        change_video = true;
+
         let file = this.files[0]
         console.log(file);
         let type = file.type
@@ -192,9 +212,11 @@ $(document).ready(function () {
             change_video = true;
             if (interval) {
                 clearInterval(interval);
-                interval = setInterval(() => {
-                    sendSnapshot();
-                }, 1000/INIT_FPS);
+                if (!blockInterval) {
+                    interval = setInterval(() => {
+                        sendSnapshot();
+                    }, 1000/INIT_FPS);
+                }
                 // console.log('create new interval', interval);
             }
 
@@ -236,7 +258,7 @@ $(document).ready(function () {
             setupCanvas('drawableCanvas')
 
             // send first snapshot to start interval if it's not interval
-            if (!interval) {
+            if (!interval && !blockInterval) {
                 interval = setInterval(() => {
                     sendSnapshot();
                 }, 1000/INIT_FPS);

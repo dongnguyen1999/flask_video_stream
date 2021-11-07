@@ -1,3 +1,4 @@
+var blockInterval = false;
 
 function setupSlider(sliderId) {
     $( `#${sliderId}` ).slider({
@@ -46,6 +47,9 @@ $(function () {
     $('input[type=radio][name=crowd_model]').change(function() {
         let value = $(this).val();
         let currentCountModel = $('input[type=radio][name=count_model]:checked').val();
+
+        blockInterval = true;
+
         $('#loading-model').show();
         $.ajax({
             type: "POST",
@@ -68,7 +72,10 @@ $(function () {
         let value = $(this).val();
         let currentCrowdModel = $('input[type=radio][name=crowd_model]:checked').val();
 
+        blockInterval = true;
+
         $('#loading-model').show();
+
         $.ajax({
             type: "POST",
             url: "/change_model",
