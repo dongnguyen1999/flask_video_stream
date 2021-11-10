@@ -38,7 +38,7 @@ def get_masked_img(img, mask):
     return img
 
 
-def compute_count_score(counts, weights=[1, 2, 3]):
+def compute_count_score(counts, weights=[1, 2, 2.5]):
     return counts[0] * weights[0] + counts[1] * weights[1] + counts[2] * weights[2]
 
 def bgr_to_hex(bgr):

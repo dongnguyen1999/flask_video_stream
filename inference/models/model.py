@@ -60,7 +60,7 @@ model_configs = {
 default_config = {
     'count_conf_threshold': 0.5,
     'classify_conf_threshold': 0.5,
-    'crowd_thresholds': [5, 20],
+    'crowd_thresholds': [10, 25],
     'count_thresholds': [10, 20],
     'show_bounding_box': True,
     'show_diff_mask': False,
