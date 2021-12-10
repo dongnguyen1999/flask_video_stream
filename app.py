@@ -3,7 +3,6 @@ from sys import stdout
 from inference.utils import create_mask, visualize, get_masked_img
 from inference.models.model import Model
 from inference.models.frame_difference import FrameDiffEstimator
-from makeup_artist import Makeup_artist
 import logging
 from flask import Flask, render_template, Response, request
 from flask_socketio import SocketIO, emit
@@ -68,8 +67,6 @@ def queue_inputs(input, mask, config):
 
         # print("OUTPUT " + image_data)
         emit('output-event', {'image_data': image_data, 'result': json.dumps(result)}, namespace='/test')
-
-
 
 @socketio.on('connect', namespace='/test')
 def test_connect():

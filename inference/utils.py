@@ -50,7 +50,7 @@ def visualize(img, model_result, cls_time, bs_time, dt_time, pred_time, display=
     scores = []
 
     color_scheme = [(255, 0, 0), (0, 255, 255), (0, 0, 255), (0, 127, 127), (127, 255, 127), (255, 255, 0)]
-    end_label_map = ['Low Density', 'Medium Density', 'High Density', 'Moving Normally', 'Moving Slowly', 'Traffic Jam']
+    end_label_map = ['Sparse Density', 'Low Density', 'Medium Density', 'Moving Normally', 'Moving Slowly', 'Traffic Jam']
 
     cls_fps = 1000 / (cls_time + 1e-6)
     bs_fps = 1000 / (bs_time + 1e-6)
