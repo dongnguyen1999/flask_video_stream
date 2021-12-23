@@ -1,22 +1,14 @@
 from sys import stdout
-
 from inference.utils import create_mask, visualize, get_masked_img
 from inference.models.model import Model
-from inference.models.frame_difference import FrameDiffEstimator
 import logging
 from flask import Flask, render_template, Response, request
 from flask_socketio import SocketIO, emit
-from camera import Camera
-from utils import base64_to_pil_image, pil_image_to_base64
 import cv2
 import numpy as np
 import base64
 import io
 from imageio import imread
-import tensorflow as tf
-import matplotlib.pyplot as plt
-import time
-import os
 import json
 
 app = Flask(__name__)
@@ -25,8 +17,6 @@ app.config['SECRET_KEY'] = 'secret!'
 app.config['DEBUG'] = True
 socketio = SocketIO(app, async_mode="threading")
 
-
-# camera = Camera(Makeup_artist())
 
 @socketio.on('input', namespace='/test')
 def queue_inputs(input, mask, config):
@@ -107,24 +97,6 @@ def index():
        }
     }
     return render_template('index.html', model_data=model_data)
-
-
-# def gen():
-#     """Video streaming generator function."""
-#
-#     app.logger.info("starting to generate frames!")
-#     while True:
-#         frame = camera.get_frame() #pil_image_to_base64(camera.get_frame())
-#
-#         print(type(frame))
-#         yield (b'--frame\r\n'
-#                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-
-
-# @app.route('/video_feed')
-# def video_feed():
-#     """Video streaming route. Put this in the src attribute of an img tag."""
-#     return Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
     model = Model('crowd_model', 'detect_model')
