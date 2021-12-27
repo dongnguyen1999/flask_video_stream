@@ -39,9 +39,9 @@ model_configs = {
         'architecture': 'ClsVgg16',
         'weights': os.path.join(WEIGHTS_PATH, 'vgg16_fineturning_epoch2.hdf5')
     },
-    'crowd_model_focalbin': {
-        'architecture': 'ClsVgg16',
-        'weights': os.path.join(WEIGHTS_PATH, 'vgg16_fineturning_focalbin_epoch10.hdf5')
+    'crowd_model_inception': {
+        'architecture': 'ClsInceptionV3',
+        'weights': os.path.join(WEIGHTS_PATH, 'inceptionv3_fineturning_epoch5.hdf5')
     },
     'count_model_1stack': {
         'architecture': 'HmOnlyHourglass1Stack',
@@ -60,7 +60,7 @@ model_configs = {
 default_config = {
     'count_conf_threshold': 0.5,
     'classify_conf_threshold': 0.5,
-    'crowd_thresholds': [10, 25],
+    'crowd_thresholds': [10, 30],
     'count_thresholds': [10, 20],
     'show_bounding_box': True,
     'show_diff_mask': False,
@@ -76,6 +76,11 @@ def create_clsvgg16_model(weights):
     model.load_weights(weights)
     return model
 
+def create_clsinceptionv3_model(weights):
+    global config
+    model = create_crowd_model(config, architecture="pretrained_inceptionv3", freeze_feature_block=False)
+    model.load_weights(weights)
+    return model
 
 def create_hmonlyhourglass1stack_model(weights):
     global config
@@ -103,6 +108,7 @@ def create_dthourglass1stack_model(weights):
 
 model_garden = {
     'ClsVgg16': create_clsvgg16_model,
+    'ClsInceptionV3': create_clsinceptionv3_model,
     'HmOnlyHourglass1Stack': create_hmonlyhourglass1stack_model,
     'HmOnlyHourglass2Stack': create_hmonlyhourglass2stack_model,
     'DtHourglass1Stack': create_dthourglass1stack_model

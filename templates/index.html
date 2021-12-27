@@ -16,8 +16,8 @@
 <div class="container-fluid">
     <div class="row">
         <div id="app-tittle" class="col-md-12">
-            Web App
-<!--            Ước lượng mật độ và mức độ <br>di chuyển của phương tiện giao thông-->
+<!--            Web App-->
+            Ứng dụng hỗ trợ giám sát giao thông
         </div>
         <div class="col-md-2 info-panel left">
             <div class="font-weight-bold text-dark">Performance:</div>
@@ -49,6 +49,9 @@
                 <img id="photo">
                 <div id="drawableContainer">
                     <canvas id="drawableCanvas"></canvas>
+                </div>
+                <div class="spinner-border text-white loading-icon" role="status">
+                  <span class="sr-only">Loading...</span>
                 </div>
                 <div id='controls'>
                     <progress id='progress-bar' min='0' max='100' value='0'>0% played</progress>
@@ -90,13 +93,13 @@
             <div class="form-check">
               <input class="form-check-input" type="radio" name="crowd_model" id="crowd_model" value="crowd_model" {% if model_data.crowd_model == 'crowd_model' %}checked{% endif %}>
               <label class="form-check-label text-dark" for="crowd_model">
-                VGG16 1
+                VGG16
               </label>
             </div>
             <div class="form-check">
-              <input class="form-check-input" type="radio" name="crowd_model" id="crowd_model_focalbin" value="crowd_model_focalbin" {% if model_data.crowd_model == 'crowd_model_focalbin' %}checked{% endif %}>
-              <label class="form-check-label text-dark" for="crowd_model_focalbin">
-                VGG16 2
+              <input class="form-check-input" type="radio" name="crowd_model" id="crowd_model_inception" value="crowd_model_inception" {% if model_data.crowd_model == 'crowd_model_inception' %}checked{% endif %}>
+              <label class="form-check-label text-dark" for="crowd_model_inception">
+                InceptionV3
               </label>
             </div>
             <hr class="my-12"/>
@@ -139,7 +142,7 @@
             <div class="font-weight-bold text-dark">Threshold:</div>
 
             <label class="form-check-label text-dark" for="slider-range-count">
-                Density:
+                Count score:
             </label>
             <div id="slider-range-count" class="my-2 mr-3" data-min="0" data-max="50" data-step="1" data-init="{{model_data.config.count_thresholds}}">
                 <div class="ui-slider-handle custom-handle left"></div>

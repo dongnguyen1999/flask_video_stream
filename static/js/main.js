@@ -2,6 +2,7 @@ var interval = null;
 var change_video = false;
 
 $(document).ready(function () {
+    $('.loading-icon').hide();
     let namespace = "/test";
     let video = document.querySelector("#videoElement");
     let canvas = document.querySelector("#canvasElement");
@@ -19,6 +20,7 @@ $(document).ready(function () {
 
 
     socket.on('output-event', function (data) {
+        $('.loading-icon').hide();
         // img.src = dataURL//data.image_data
         // outputDelayCounter = 0;
         // console.log('response image')
@@ -183,7 +185,7 @@ $(document).ready(function () {
     // }
 
     let playSelectedFile = function (event) {
-
+        $('.loading-icon').show();
         change_video = true;
 
         let file = this.files[0]
